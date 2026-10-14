@@ -1,9 +1,10 @@
-#ifndef GAMEPLAY_UI_H
-#define GAMEPLAY_UI_H
+#ifndef UI_BATTLEFIELD_H
+#define UI_BATTLEFIELD_H
 
 #include <SDL2/SDL.h>
 
-void drawGameMap(SDL_Renderer* renderer);
+void drawGameMap1(SDL_Renderer* renderer);
+void drawGameMap2(SDL_Renderer* renderer);
 void drawTowers(SDL_Renderer* renderer);
 void drawEnemies(SDL_Renderer* renderer);
 void drawProjectiles(SDL_Renderer* renderer);

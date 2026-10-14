@@ -1,6 +1,6 @@
-#include "../include/gameplay_ui.h"
+#include "ui_battlefield.h"
 
-void drawGameMap(SDL_Renderer* renderer)
+void drawGameMap1(SDL_Renderer* renderer)
 {
     SDL_Rect mapArea = {50, 50, 900, 600};
 

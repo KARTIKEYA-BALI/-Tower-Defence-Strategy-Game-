@@ -1,7 +1,7 @@
 
-#include "gameplay_ui.h"
+#include "ui_battlefield.h"
 
-void drawGameMap(SDL_Renderer* renderer)
+void drawGameMap2(SDL_Renderer* renderer)
 {
     // 1. Draw green grass background
     SDL_SetRenderDrawColor(renderer, 80, 150, 70, 255);

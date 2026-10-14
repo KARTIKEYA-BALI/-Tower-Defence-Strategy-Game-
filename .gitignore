@@ -1,3 +1,6 @@
 *.exe
 *.o
 engine/tests/
+siege_supply
+.vscode/
+*.log

@@ -1,9 +1,9 @@
 
-#ifndef CONTROL_UI_H
-#define CONTROL_UI_H
+#ifndef UI_MENU_H
+#define UI_MENU_H
 
-#include <SDL.h>
-#include <SDL_ttf.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 
 void drawControlUI(SDL_Renderer* renderer,
                    TTF_Font* font,
