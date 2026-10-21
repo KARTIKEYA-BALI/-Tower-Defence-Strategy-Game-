@@ -1,3 +1,8 @@
 *.exe
 *.o
-engine/tests/
+siege_supply
+.DS_Store
+Claude outputs/
+docs/
+prototypes/
+_integration_test/
