@@ -6,6 +6,7 @@
 #include "entity.h"
 #include "gfx.h"
 #include "map_view.h"
+#include "profile_manager.h"
 #include "screens.h"
 #include "shop_manager.h"
 #include "side_panel.h"
@@ -15,7 +16,7 @@
 #include <string>
 #include <vector>
 
-enum class GameState { Menu, Playing, Paused, GameOver, Victory };
+enum class GameState { Profiles, Menu, Playing, Paused, GameOver, Victory };
 
 enum class Placement { Ok, OffMap, NotBuildable, Occupied, BlocksPath, EnemyInWay, NoGold };
 
@@ -54,6 +55,7 @@ private:
     SidePanel panel;
     Screens screens;
     Effects effects;
+    ProfileManager profiles;
 
     std::vector<std::unique_ptr<Entity>> entities;
     std::vector<std::unique_ptr<Entity>> pending;
@@ -74,6 +76,11 @@ private:
     int enemiesDefeated;
     int towersBuilt;
     int wavesCleared;
+
+    int activeProfile;
+    int pendingDeleteId;
+    std::string nameInput;
+    std::vector<ProfileRow> profileRows;
 
     MouseState mouse;
     int hoverCacheCell;
@@ -113,6 +120,17 @@ private:
 
     void saveGame();
     void loadGame();
+    bool inMenus() const;
+    std::string activeName() const;
+    void openProfiles();
+    void closeProfiles();
+    void refreshProfileRows();
+    void selectProfile(int id);
+    void submitNewProfile();
+    void deleteProfile(int id);
+    void cancelDelete();
+    void handleTextInput(const char* text);
+    void handleProfilesClick();
     void showMessage(const std::string& text, Color color);
     void showBanner(const std::string& title, const std::string& sub);
 

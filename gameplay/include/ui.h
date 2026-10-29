@@ -37,6 +37,7 @@ public:
 
     SDL_FRect rect;
     std::string placeholder;
+    bool searchIcon;
 };
 
 namespace icons {

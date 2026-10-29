@@ -16,16 +16,16 @@ const float PI_F = 3.14159265358979f;
 }
 
 Game::Game(Gfx& g)
-    : gfx(g), state(GameState::Menu), running(true), showHelp(false), hasSave(false), gold(STARTING_GOLD),
+    : gfx(g), state(GameState::Profiles), running(true), showHelp(false), hasSave(false), gold(STARTING_GOLD),
       castleHealth(MAX_CASTLE_HEALTH), nextTowerObjectId(0), placingType(-1), selectedTowerId(-1), mapVersion(0),
-      enemiesDefeated(0), towersBuilt(0), wavesCleared(0), mouse{0, 0, false}, hoverCacheCell(-1),
-      hoverCacheVersion(-1), hoverCacheCanPlace(false), messageColor(pal::uiText), messageTimer(0.0f), bannerTimer(0.0f),
-      castleFlash(0.0f), shake(0.0f), clock(0.0f), smokeTimer(0.0f), fastSpeed(false) {
+      enemiesDefeated(0), towersBuilt(0), wavesCleared(0), activeProfile(-1), pendingDeleteId(-1), mouse{0, 0, false},
+      hoverCacheCell(-1), hoverCacheVersion(-1), hoverCacheCanPlace(false), messageColor(pal::uiText), messageTimer(0.0f),
+      bannerTimer(0.0f), castleFlash(0.0f), shake(0.0f), clock(0.0f), smokeTimer(0.0f), fastSpeed(false) {
     if (!engine_init(MAP_W, MAP_H)) std::fprintf(stderr, "engine_init failed\n");
     std::string level = Gfx::assetPath(LEVEL_PATH);
     if (!engine_load_level(level.c_str())) std::fprintf(stderr, "engine_load_level failed: %s\n", level.c_str());
-    SDL_StopTextInput();
-    hasSave = SaveManager::exists(SaveManager::defaultPath());
+    profiles.load();
+    openProfiles();
 }
 
 Game::~Game() {
@@ -318,7 +318,142 @@ void Game::showBanner(const std::string& title, const std::string& sub) {
     bannerTimer = 2.6f;
 }
 
+bool Game::inMenus() const {
+    return state == GameState::Profiles || state == GameState::Menu;
+}
+
+std::string Game::activeName() const {
+    const Profile* p = profiles.find(activeProfile);
+    return p ? p->name : "";
+}
+
+void Game::openProfiles() {
+    state = GameState::Profiles;
+    nameInput.clear();
+    pendingDeleteId = -1;
+    refreshProfileRows();
+    SDL_StartTextInput();
+}
+
+void Game::closeProfiles() {
+    nameInput.clear();
+    cancelDelete();
+    SDL_StopTextInput();
+    state = GameState::Menu;
+}
+
+void Game::refreshProfileRows() {
+    profileRows.clear();
+    for (const Profile& p : profiles.all()) {
+        std::string path = profiles.savePath(p.id);
+        SaveData data;
+        std::string error;
+        std::string detail = "No saved game yet";
+        if (SaveManager::load(path, data, error)) detail = "Saved game at wave " + std::to_string(data.wave);
+        else if (SaveManager::exists(path)) detail = "Save file is damaged";
+        bool last = p.id == profiles.lastUsed();
+        if (last) detail = "Last played  |  " + detail;
+        profileRows.push_back({p.id, p.name, detail, last});
+    }
+}
+
+void Game::selectProfile(int id) {
+    const Profile* p = profiles.find(id);
+    if (!p) return;
+    activeProfile = id;
+    profiles.setLastUsed(id);
+    hasSave = SaveManager::exists(profiles.savePath(id));
+    closeProfiles();
+    showMessage("Welcome, " + p->name, pal::good);
+}
+
+void Game::submitNewProfile() {
+    int id = -1;
+    switch (profiles.create(nameInput, id)) {
+    case ProfileResult::Ok:
+        selectProfile(id);
+        break;
+    case ProfileResult::EmptyName:
+        showMessage("Type a name first", pal::danger);
+        break;
+    case ProfileResult::NameTaken:
+        showMessage("That name is already taken", pal::danger);
+        break;
+    case ProfileResult::Full:
+        showMessage("Only " + std::to_string(ProfileManager::MAX_PROFILES) + " profiles allowed", pal::danger);
+        break;
+    case ProfileResult::WriteFailed:
+        showMessage("Could not save the profile list", pal::danger);
+        break;
+    }
+}
+
+void Game::deleteProfile(int id) {
+    const Profile* p = profiles.find(id);
+    if (!p) return;
+    std::string name = p->name;
+    pendingDeleteId = -1;
+    if (!profiles.remove(id)) {
+        showMessage("Could not delete " + name, pal::danger);
+        return;
+    }
+    if (activeProfile == id) {
+        activeProfile = -1;
+        hasSave = false;
+    }
+    refreshProfileRows();
+    showMessage("Deleted " + name, pal::uiText);
+}
+
+void Game::cancelDelete() {
+    if (pendingDeleteId < 0) return;
+    pendingDeleteId = -1;
+    messageTimer = 0.0f;
+}
+
+void Game::handleTextInput(const char* text) {
+    if (state != GameState::Profiles || showHelp) return;
+    for (const char* c = text; *c; c++) {
+        if (!ProfileManager::validChar(*c) || nameInput.size() >= ProfileManager::MAX_NAME) continue;
+        if (*c == ' ' && (nameInput.empty() || nameInput.back() == ' ')) continue;
+        nameInput.push_back(*c);
+    }
+}
+
+void Game::handleProfilesClick() {
+    ProfileHit hit = screens.profilesHit(mouse.x, mouse.y, static_cast<int>(profileRows.size()));
+    if (hit.action != ScreenAction::DeleteProfile) cancelDelete();
+    switch (hit.action) {
+    case ScreenAction::PickProfile:
+        selectProfile(profileRows[hit.index].id);
+        break;
+    case ScreenAction::DeleteProfile: {
+        const ProfileRow& row = profileRows[hit.index];
+        if (pendingDeleteId == row.id) {
+            deleteProfile(row.id);
+        } else {
+            pendingDeleteId = row.id;
+            showMessage("Click Confirm to delete " + row.name + " and its save", pal::danger);
+        }
+        break;
+    }
+    case ScreenAction::CreateProfile:
+        submitNewProfile();
+        break;
+    case ScreenAction::Back:
+        if (activeProfile >= 0) closeProfiles();
+        else running = false;
+        break;
+    default:
+        break;
+    }
+}
+
 void Game::saveGame() {
+    if (activeProfile < 0) {
+        showMessage("Choose a profile first", pal::danger);
+        return;
+    }
     SaveData data;
     data.gold = gold;
     data.health = castleHealth;
@@ -330,18 +465,23 @@ void Game::saveGame() {
     std::size_t raw = 0;
     std::size_t stored = 0;
     std::string error;
-    if (SaveManager::save(data, SaveManager::defaultPath(), raw, stored, error)) {
+    if (SaveManager::save(data, profiles.savePath(activeProfile), raw, stored, error)) {
         hasSave = true;
-        showMessage("Saved: " + std::to_string(raw) + " -> " + std::to_string(stored) + " bytes", pal::good);
+        showMessage("Saved for " + activeName() + ": " + std::to_string(raw) + " -> " + std::to_string(stored) + " bytes",
+                    pal::good);
     } else {
         showMessage(error, pal::danger);
     }
 }
 
 void Game::loadGame() {
+    if (activeProfile < 0) {
+        showMessage("Choose a profile first", pal::danger);
+        return;
+    }
     SaveData data;
     std::string error;
-    if (!SaveManager::load(SaveManager::defaultPath(), data, error)) {
+    if (!SaveManager::load(profiles.savePath(activeProfile), data, error)) {
         showMessage(error, pal::danger);
         return;
     }
@@ -394,6 +534,9 @@ void Game::handleEvent(const SDL_Event& e) {
     case SDL_KEYDOWN:
         handleKey(e.key);
         break;
+    case SDL_TEXTINPUT:
+        handleTextInput(e.text.text);
+        break;
     case SDL_WINDOWEVENT:
         if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST && state == GameState::Playing) {
             mouse.down = false;
@@ -412,6 +555,20 @@ void Game::handleKey(const SDL_KeyboardEvent& key) {
         return;
     }
 
+    if (state == GameState::Profiles) {
+        if (k == SDLK_BACKSPACE) {
+            if (!nameInput.empty()) nameInput.pop_back();
+        } else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
+            if (!nameInput.empty()) submitNewProfile();
+            else if (profiles.find(profiles.lastUsed())) selectProfile(profiles.lastUsed());
+            else showMessage("Type a name first", pal::danger);
+        } else if (k == SDLK_ESCAPE) {
+            if (!nameInput.empty()) nameInput.clear();
+            else if (activeProfile >= 0) closeProfiles();
+            else running = false;
+        }
+        return;
+    }
     if (state == GameState::Menu) {
         if (k == SDLK_RETURN || k == SDLK_SPACE) startNewGame();
         else if (k == SDLK_ESCAPE) running = false;
@@ -466,6 +623,10 @@ void Game::handleMouseDown(int button) {
     }
     if (button != SDL_BUTTON_LEFT && button != SDL_BUTTON_RIGHT) return;
 
+    if (state == GameState::Profiles) {
+        if (button == SDL_BUTTON_LEFT) handleProfilesClick();
+        return;
+    }
     if (state == GameState::Menu) {
         if (button != SDL_BUTTON_LEFT) return;
         switch (screens.menuHit(mouse.x, mouse.y, hasSave)) {
@@ -474,6 +635,9 @@ void Game::handleMouseDown(int button) {
             break;
         case ScreenAction::Continue:
             loadGame();
+            break;
+        case ScreenAction::Profiles:
+            openProfiles();
             break;
         case ScreenAction::Help:
             showHelp = true;
@@ -716,7 +880,7 @@ void Game::drawMessage() {
     if (messageTimer <= 0.0f || message.empty()) return;
     float a = std::min(1.0f, messageTimer / 0.4f);
     float w = gfx.textWidth(FontId::BodyMedium, message) + 44.0f;
-    float cx = PANEL_X * 0.5f;
+    float cx = inMenus() ? WINDOW_W * 0.5f : PANEL_X * 0.5f;
     float y = MAP_H * CELL_SIZE - 62.0f;
     float prev = gfx.alpha();
     gfx.setAlpha(a);
@@ -744,7 +908,7 @@ void Game::drawBattlefield() {
     map.drawRocks(gfx);
     map.drawPortal(gfx);
     drawEntities(0);
-    if (state != GameState::Menu) drawSelectedRange();
+    if (!inMenus()) drawSelectedRange();
     drawEntities(1);
     map.drawCastle(gfx, castleFlash);
     drawEntities(2);
@@ -752,7 +916,7 @@ void Game::drawBattlefield() {
     if (state == GameState::Playing && !showHelp) drawPlacementPreview();
     gfx.setOffset(0.0f, 0.0f);
     map.drawVignette(gfx);
-    if (state != GameState::Menu) {
+    if (!inMenus()) {
         drawBanner();
         drawMessage();
     }
@@ -766,8 +930,10 @@ void Game::draw() {
 
     drawBattlefield();
 
-    if (state == GameState::Menu) {
-        screens.drawMenu(gfx, mouse, hasSave);
+    if (state == GameState::Profiles) {
+        screens.drawProfiles(gfx, mouse, profileRows, nameInput, pendingDeleteId, activeProfile >= 0);
+    } else if (state == GameState::Menu) {
+        screens.drawMenu(gfx, mouse, hasSave, activeName());
     } else {
         panel.draw(gfx, buildPanelModel(), mouse);
         if (state == GameState::Paused) screens.drawPause(gfx, mouse);
@@ -778,7 +944,7 @@ void Game::draw() {
         }
     }
     if (showHelp) screens.drawHelp(gfx, mouse);
-    if (state == GameState::Menu && messageTimer > 0.0f) drawMessage();
+    if (inMenus() && messageTimer > 0.0f) drawMessage();
 
     gfx.endFrame();
 }

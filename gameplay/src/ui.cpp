@@ -68,10 +68,10 @@ void Button::draw(Gfx& g, const MouseState& mouse, const std::string& subLabel) 
     }
 }
 
-TextBox::TextBox() : rect{0, 0, 0, 0} {
+TextBox::TextBox() : rect{0, 0, 0, 0}, searchIcon(true) {
 }
 
-TextBox::TextBox(SDL_FRect r, const std::string& p) : rect(r), placeholder(p) {
+TextBox::TextBox(SDL_FRect r, const std::string& p) : rect(r), placeholder(p), searchIcon(true) {
 }
 
 bool TextBox::contains(float mx, float my) const {
@@ -83,8 +83,8 @@ void TextBox::draw(Gfx& g, const std::string& text, bool focused, const MouseSta
     Color border = focused ? pal::gold : (hover ? rgba(96, 108, 140) : pal::uiLine);
     g.fillRoundRect(rect.x - 1.0f, rect.y - 1.0f, rect.w + 2.0f, rect.h + 2.0f, 8.0f, border);
     g.fillRoundRectGradient(rect.x, rect.y, rect.w, rect.h, 7.0f, rgba(14, 17, 26), rgba(22, 26, 38));
-    icons::magnifier(g, rect.x + 15.0f, rect.y + rect.h * 0.5f, 10.0f, focused ? pal::gold : pal::uiMuted);
-    float tx = rect.x + 28.0f;
+    if (searchIcon) icons::magnifier(g, rect.x + 15.0f, rect.y + rect.h * 0.5f, 10.0f, focused ? pal::gold : pal::uiMuted);
+    float tx = rect.x + (searchIcon ? 28.0f : 12.0f);
     float ty = rect.y + rect.h * 0.5f;
     if (text.empty()) {
         g.textCentered(FontId::Body, placeholder, tx + g.textWidth(FontId::Body, placeholder) * 0.5f, ty, rgba(110, 118, 140));

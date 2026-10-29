@@ -3,8 +3,36 @@
 
 #include "ui.h"
 #include <string>
+#include <vector>
 
-enum class ScreenAction { None, NewGame, Continue, Help, Quit, Resume, Restart, MainMenu, CloseHelp };
+enum class ScreenAction {
+    None,
+    NewGame,
+    Continue,
+    Help,
+    Quit,
+    Resume,
+    Restart,
+    MainMenu,
+    CloseHelp,
+    Profiles,
+    PickProfile,
+    DeleteProfile,
+    CreateProfile,
+    Back
+};
+
+struct ProfileRow {
+    int id;
+    std::string name;
+    std::string detail;
+    bool lastUsed;
+};
+
+struct ProfileHit {
+    ScreenAction action;
+    int index;
+};
 
 struct EndStats {
     bool victory;
@@ -23,17 +51,24 @@ public:
     ScreenAction pauseHit(float mx, float my) const;
     ScreenAction endHit(float mx, float my) const;
     ScreenAction helpHit(float mx, float my) const;
+    ProfileHit profilesHit(float mx, float my, int rowCount) const;
 
-    void drawMenu(Gfx& g, const MouseState& mouse, bool hasSave) const;
+    void drawMenu(Gfx& g, const MouseState& mouse, bool hasSave, const std::string& profileName) const;
     void drawPause(Gfx& g, const MouseState& mouse) const;
     void drawEnd(Gfx& g, const MouseState& mouse, const EndStats& stats) const;
     void drawHelp(Gfx& g, const MouseState& mouse) const;
+    void drawProfiles(Gfx& g, const MouseState& mouse, const std::vector<ProfileRow>& rows, const std::string& input,
+                      int pendingDeleteId, bool canGoBack) const;
 
 private:
     Button newGame;
     Button continueGame;
+    Button changeProfile;
     Button help;
     Button quit;
+    Button createProfile;
+    Button backProfiles;
+    TextBox nameBox;
     Button resume;
     Button restartPause;
     Button menuPause;

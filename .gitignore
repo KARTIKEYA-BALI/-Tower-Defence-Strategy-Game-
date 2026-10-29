@@ -6,3 +6,5 @@ Claude outputs/
 docs/
 prototypes/
 _integration_test/
+save*.dat
+profiles.txt

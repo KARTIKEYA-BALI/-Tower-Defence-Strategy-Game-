@@ -22,8 +22,6 @@ struct SaveData {
 
 class SaveManager {
 public:
-    static const char* defaultPath() { return "save.dat"; }
-
     static std::string toText(const SaveData& data);
     static bool fromText(const std::string& text, SaveData& out);
 
