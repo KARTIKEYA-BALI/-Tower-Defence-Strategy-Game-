@@ -24,6 +24,10 @@ void AmmoStore::setMax(int maxAmmo) {
     count = std::min(count, capacity);
 }
 
+void AmmoStore::setCurrent(int amount) {
+    count = std::clamp(amount, 0, capacity);
+}
+
 float AmmoStore::fraction() const {
     return static_cast<float>(count) / static_cast<float>(capacity);
 }

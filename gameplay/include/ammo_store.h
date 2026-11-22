@@ -9,6 +9,7 @@ public:
     void refill(int amount);
     void refillFull();
     void setMax(int maxAmmo);
+    void setCurrent(int amount);
 
     int current() const { return count; }
     int max() const { return capacity; }
