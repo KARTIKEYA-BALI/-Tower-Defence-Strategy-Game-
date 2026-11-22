@@ -42,6 +42,20 @@ const Color supply      = {96, 170, 230, 255};
 const Color shadow      = {0, 0, 0, 255};
 }
 
+struct IsoView {
+    float originX;
+    float originY;
+    float halfW;
+    float halfH;
+    float lift;
+    bool square;
+
+    SDL_FPoint toScreen(float wx, float wy, float z = 0.0f) const;
+    SDL_FPoint toWorld(float sx, float sy) const;
+    float spriteScale() const;
+    float depth(float wx, float wy) const;
+};
+
 enum class FontId { Title, HeadingLarge, Heading, HeadingSmall, Number, BodyBold, BodyMedium, Body, Small, SmallBold, Count };
 enum class Align { Left, Center, Right };
 
@@ -58,10 +72,25 @@ public:
 
     SDL_Renderer* sdl() const { return renderer; }
     float scale() const { return pixelScale; }
+    SDL_FPoint toLogical(int windowX, int windowY) const;
+    void toggleFullscreen();
+    bool isFullscreen() const;
     float time() const { return now; }
     static std::string assetPath(const std::string& relative);
 
     void setOffset(float x, float y) { offX = x; offY = y; }
+
+    void setCamera(const IsoView& v) { cam = v; }
+    const IsoView& camera() const { return cam; }
+    void useScreen();
+    void useGround(float z = 0.0f);
+    void useBillboard(float wx, float wy, float z = 0.0f, float scale = 1.0f);
+    void useSprite(float wx, float wy, float z, float scale, float localX, float localY);
+    SDL_FPoint project(float wx, float wy, float z = 0.0f) const { return cam.toScreen(wx, wy, z); }
+    float spriteScale() const { return cam.spriteScale(); }
+    float fitScale() const;
+    void applyView();
+    bool facesViewer(float nx, float ny) const { return cam.square ? ny > 0.02f : nx + ny > 0.02f; }
     void setAlpha(float a) { alphaMul = a; }
     float alpha() const { return alphaMul; }
     void setClip(float x, float y, float w, float h);
@@ -100,6 +129,9 @@ private:
     };
 
     SDL_Renderer* renderer;
+    SDL_Window* win;
+    float viewX;
+    float viewY;
     TTF_Font* fonts[static_cast<int>(FontId::Count)];
     std::unordered_map<std::string, CachedText> textCache;
     std::vector<SDL_Vertex> verts;
@@ -110,11 +142,19 @@ private:
     float now;
     float offX;
     float offY;
+    float xa;
+    float xb;
+    float xc;
+    float xd;
+    float xtx;
+    float xty;
+    IsoView cam;
     float alphaMul;
     Uint32 frameNo;
 
     void closeFonts();
     SDL_Color toSdl(Color c) const;
+    SDL_FPoint xf(float x, float y) const;
     SDL_Vertex vert(float x, float y, Color c) const;
     void flush();
     void convex(const std::vector<SDL_FPoint>& pts, const std::vector<Color>& cols, Color centre);

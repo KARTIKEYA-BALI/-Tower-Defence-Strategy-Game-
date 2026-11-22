@@ -57,16 +57,36 @@ Color shade(Color c, float factor) {
     return rgba(static_cast<int>(c.r * factor), static_cast<int>(c.g * factor), static_cast<int>(c.b * factor), c.a);
 }
 
+SDL_FPoint IsoView::toScreen(float wx, float wy, float z) const {
+    float u = wx / CELL_SIZE;
+    float v = wy / CELL_SIZE;
+    if (square) return {originX + u * halfW * 2.0f, originY + v * halfH * 2.0f - z * lift};
+    return {originX + (u - v) * halfW, originY + (u + v) * halfH - z * lift};
+}
+
+SDL_FPoint IsoView::toWorld(float sx, float sy) const {
+    if (square) return {(sx - originX) / (halfW * 2.0f) * CELL_SIZE, (sy - originY) / (halfH * 2.0f) * CELL_SIZE};
+    float a = (sx - originX) / halfW;
+    float b = (sy - originY) / halfH;
+    return {(a + b) * 0.5f * CELL_SIZE, (b - a) * 0.5f * CELL_SIZE};
+}
+
+float IsoView::spriteScale() const {
+    return halfW * 2.0f / CELL_SIZE;
+}
+
+float IsoView::depth(float wx, float wy) const {
+    if (square) return (wy + wx * 0.001f) / CELL_SIZE;
+    return (wx + wy) / CELL_SIZE;
+}
+
 Gfx::Gfx(SDL_Window* w, SDL_Renderer* r)
-    : renderer(r), pixelScale(1.0f), fontScale(1.0f), now(0.0f), offX(0.0f), offY(0.0f), alphaMul(1.0f),
+    : renderer(r), win(w), viewX(0.0f), viewY(0.0f), pixelScale(1.0f), fontScale(1.0f), now(0.0f), offX(0.0f), offY(0.0f), xa(1.0f), xb(0.0f), xc(0.0f),
+      xd(1.0f), xtx(0.0f), xty(0.0f), cam{0.0f, 0.0f, CELL_SIZE * 0.5f, CELL_SIZE * 0.25f, 1.0f, false}, alphaMul(1.0f),
       frameNo(0) {
-    (void)w;
     for (TTF_Font*& f : fonts) f = nullptr;
-    int outW = WINDOW_W;
-    int outH = WINDOW_H;
-    SDL_GetRendererOutputSize(renderer, &outW, &outH);
-    pixelScale = std::max(1.0f, static_cast<float>(outW) / WINDOW_W);
-    SDL_RenderSetScale(renderer, pixelScale, pixelScale);
+    pixelScale = fitScale();
+    applyView();
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 }
 
@@ -117,14 +137,11 @@ bool Gfx::loadFonts() {
 
 bool Gfx::beginFrame(float timeSeconds) {
     now = timeSeconds;
-    int outW = WINDOW_W;
-    int outH = WINDOW_H;
-    SDL_GetRendererOutputSize(renderer, &outW, &outH);
-    float s = std::max(1.0f, static_cast<float>(outW) / WINDOW_W);
+    float s = fitScale();
     bool changed = std::fabs(s - pixelScale) > 0.01f;
+    pixelScale = s;
+    applyView();
     if (changed) {
-        pixelScale = s;
-        SDL_RenderSetScale(renderer, pixelScale, pixelScale);
         purgeCache(true);
         loadFonts();
     }
@@ -132,7 +149,61 @@ bool Gfx::beginFrame(float timeSeconds) {
     offX = 0.0f;
     offY = 0.0f;
     alphaMul = 1.0f;
+    useScreen();
     return changed;
+}
+
+void Gfx::useScreen() {
+    xa = 1.0f;
+    xb = 0.0f;
+    xc = 0.0f;
+    xd = 1.0f;
+    xtx = 0.0f;
+    xty = 0.0f;
+}
+
+void Gfx::useGround(float z) {
+    if (cam.square) {
+        xa = cam.halfW * 2.0f / CELL_SIZE;
+        xb = 0.0f;
+        xc = 0.0f;
+        xd = cam.halfH * 2.0f / CELL_SIZE;
+        xtx = cam.originX;
+        xty = cam.originY - z * cam.lift;
+        return;
+    }
+    xa = cam.halfW / CELL_SIZE;
+    xb = -cam.halfW / CELL_SIZE;
+    xc = cam.halfH / CELL_SIZE;
+    xd = cam.halfH / CELL_SIZE;
+    xtx = cam.originX;
+    xty = cam.originY - z * cam.lift;
+}
+
+void Gfx::useBillboard(float wx, float wy, float z, float scale) {
+    SDL_FPoint p = cam.toScreen(wx, wy, z);
+    float s = scale * cam.spriteScale();
+    xa = s;
+    xb = 0.0f;
+    xc = 0.0f;
+    xd = s;
+    xtx = p.x - s * wx;
+    xty = p.y - s * wy;
+}
+
+void Gfx::useSprite(float wx, float wy, float z, float scale, float localX, float localY) {
+    SDL_FPoint p = cam.toScreen(wx, wy, z);
+    float s = scale * cam.spriteScale();
+    xa = s;
+    xb = 0.0f;
+    xc = 0.0f;
+    xd = s;
+    xtx = p.x - s * localX;
+    xty = p.y - s * localY;
+}
+
+SDL_FPoint Gfx::xf(float x, float y) const {
+    return {xa * x + xb * y + xtx, xc * x + xd * y + xty};
 }
 
 void Gfx::endFrame() {
@@ -161,8 +232,9 @@ SDL_Color Gfx::toSdl(Color c) const {
 
 SDL_Vertex Gfx::vert(float x, float y, Color c) const {
     SDL_Vertex v;
-    v.position.x = x + offX;
-    v.position.y = y + offY;
+    SDL_FPoint p = xf(x, y);
+    v.position.x = p.x + offX;
+    v.position.y = p.y + offY;
     v.color = toSdl(c);
     v.tex_coord.x = 0.0f;
     v.tex_coord.y = 0.0f;
@@ -179,8 +251,50 @@ void Gfx::flush() {
 }
 
 void Gfx::clear(Color c) {
-    SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, 255);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
+    SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, 255);
+    SDL_RenderFillRect(renderer, nullptr);
+}
+
+float Gfx::fitScale() const {
+    int outW = WINDOW_W;
+    int outH = WINDOW_H;
+    SDL_GetRendererOutputSize(renderer, &outW, &outH);
+    float s = std::min(static_cast<float>(outW) / WINDOW_W, static_cast<float>(outH) / WINDOW_H);
+    return std::max(0.5f, s);
+}
+
+void Gfx::applyView() {
+    int outW = WINDOW_W;
+    int outH = WINDOW_H;
+    SDL_GetRendererOutputSize(renderer, &outW, &outH);
+    viewX = std::max(0.0f, (outW - WINDOW_W * pixelScale) * 0.5f);
+    viewY = std::max(0.0f, (outH - WINDOW_H * pixelScale) * 0.5f);
+    SDL_RenderSetScale(renderer, pixelScale, pixelScale);
+    SDL_Rect vp = {static_cast<int>(viewX / pixelScale), static_cast<int>(viewY / pixelScale), WINDOW_W, WINDOW_H};
+    SDL_RenderSetViewport(renderer, &vp);
+}
+
+SDL_FPoint Gfx::toLogical(int windowX, int windowY) const {
+    int winW = WINDOW_W;
+    int winH = WINDOW_H;
+    int outW = WINDOW_W;
+    int outH = WINDOW_H;
+    if (win) SDL_GetWindowSize(win, &winW, &winH);
+    SDL_GetRendererOutputSize(renderer, &outW, &outH);
+    float px = windowX * (winW > 0 ? static_cast<float>(outW) / winW : 1.0f);
+    float py = windowY * (winH > 0 ? static_cast<float>(outH) / winH : 1.0f);
+    return {(px - viewX) / pixelScale, (py - viewY) / pixelScale};
+}
+
+bool Gfx::isFullscreen() const {
+    return win && (SDL_GetWindowFlags(win) & SDL_WINDOW_FULLSCREEN) != 0;
+}
+
+void Gfx::toggleFullscreen() {
+    if (!win) return;
+    SDL_SetWindowFullscreen(win, isFullscreen() ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
 }
 
 int Gfx::segmentsFor(float r) const {
@@ -458,9 +572,22 @@ void Gfx::line(float x1, float y1, float x2, float y2, float t, Color c) {
 
 void Gfx::drawTexture(SDL_Texture* tex, float x, float y, float w, float h) {
     if (!tex) return;
-    SDL_FRect dst = {x + offX, y + offY, w, h};
-    SDL_SetTextureAlphaMod(tex, static_cast<Uint8>(std::clamp(255.0f * alphaMul, 0.0f, 255.0f)));
-    SDL_RenderCopyF(renderer, tex, nullptr, &dst);
+    const float cx[4] = {x, x + w, x + w, x};
+    const float cy[4] = {y, y, y + h, y + h};
+    const float tu[4] = {0.0f, 1.0f, 1.0f, 0.0f};
+    const float tv[4] = {0.0f, 0.0f, 1.0f, 1.0f};
+    SDL_Vertex v[4];
+    Uint8 a = static_cast<Uint8>(std::clamp(255.0f * alphaMul, 0.0f, 255.0f));
+    for (int i = 0; i < 4; i++) {
+        SDL_FPoint p = xf(cx[i], cy[i]);
+        v[i].position.x = p.x + offX;
+        v[i].position.y = p.y + offY;
+        v[i].color = SDL_Color{255, 255, 255, a};
+        v[i].tex_coord.x = tu[i];
+        v[i].tex_coord.y = tv[i];
+    }
+    const int idx[6] = {0, 1, 2, 0, 2, 3};
+    SDL_RenderGeometry(renderer, tex, v, 4, idx, 6);
 }
 
 Gfx::CachedText* Gfx::cachedText(FontId font, const std::string& s, Color c) {
@@ -521,7 +648,9 @@ void Gfx::text(FontId font, const std::string& s, float x, float y, Color c, Ali
             float sx = x;
             if (align == Align::Center) sx -= sw * 0.5f;
             else if (align == Align::Right) sx -= sw;
-            SDL_FRect d = {sx + offX + 1.0f, y + offY + 1.5f, sw, shh};
+            SDL_FPoint q = xf(sx, y);
+            float k = (xb == 0.0f && xc == 0.0f) ? xa : 1.0f;
+            SDL_FRect d = {q.x + offX + 1.0f, q.y + offY + 1.5f, sw * k, shh * k};
             SDL_SetTextureAlphaMod(sh->tex, static_cast<Uint8>(std::clamp(c.a * alphaMul * 0.6f, 0.0f, 255.0f)));
             SDL_RenderCopyF(renderer, sh->tex, nullptr, &d);
         }
@@ -532,7 +661,9 @@ void Gfx::text(FontId font, const std::string& s, float x, float y, Color c, Ali
     float h = t->h / fontScale;
     if (align == Align::Center) x -= w * 0.5f;
     else if (align == Align::Right) x -= w;
-    SDL_FRect dst = {x + offX, y + offY, w, h};
+    SDL_FPoint q = xf(x, y);
+    float k = (xb == 0.0f && xc == 0.0f) ? xa : 1.0f;
+    SDL_FRect dst = {q.x + offX, q.y + offY, w * k, h * k};
     SDL_SetTextureAlphaMod(t->tex, static_cast<Uint8>(std::clamp(c.a * alphaMul, 0.0f, 255.0f)));
     SDL_RenderCopyF(renderer, t->tex, nullptr, &dst);
 }
