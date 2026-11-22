@@ -8,9 +8,11 @@
 #include "gfx.h"
 #include "map_view.h"
 #include "profile_manager.h"
+#include "record_book.h"
 #include "screens.h"
 #include "shop_manager.h"
 #include "side_panel.h"
+#include "spell_book.h"
 #include "tower.h"
 #include "troop.h"
 #include "wave_manager.h"
@@ -18,14 +20,21 @@
 #include <string>
 #include <vector>
 
-enum class GameState { Profiles, Menu, Playing, Paused, GameOver, Victory };
+enum class GameState { Profiles, Menu, MapSelect, Playing, Paused, GameOver, Victory };
 
-enum class Placement { Ok, OffMap, NotBuildable, Occupied, BlocksPath, EnemyInWay, NoGold };
+enum class Placement { Ok, OffMap, NotBuildable, Occupied, BlocksPath, EnemyInWay, NoGold, TroopInWay };
+
+constexpr int TAB_TOWERS = 0;
+constexpr int TAB_SPELLS = 1;
+constexpr int TAB_TROOPS = 2;
 
 class Game {
 public:
     static constexpr int STARTING_GOLD = 150;
     static constexpr int MAX_CASTLE_HEALTH = 100;
+    static constexpr int AMMO_DRONE_COST = 15;
+    static constexpr int REPAIR_DRONE_COST = 20;
+    static constexpr int MAX_DRONES = 3;
 
     explicit Game(Gfx& gfx);
     ~Game();
@@ -48,9 +57,9 @@ public:
     void damageEnemy(Enemy& enemy, int amount);
     void splashDamage(float x, float y, float radius, int damage);
     void damageCastle(int amount, float x, float y);
-    void deliverDrone(Drone& drone, Tower& tower);
     void damageTower(Tower& tower, int amount);
     void damageDrone(Drone& drone, int amount);
+    void deliverDrone(Drone& drone, Tower& tower);
     Effects& fx() { return effects; }
 
     void spawnEnemy(EnemyKind kind, float healthScale);
@@ -66,6 +75,8 @@ private:
     Screens screens;
     Effects effects;
     ProfileManager profiles;
+    SpellBook spells;
+    RecordBook records;
 
     std::vector<std::unique_ptr<Entity>> entities;
     std::vector<std::unique_ptr<Entity>> pending;
@@ -89,10 +100,15 @@ private:
     int towersBuilt;
     int wavesCleared;
 
+    int levelIndex;
     int activeProfile;
     int pendingDeleteId;
     std::string nameInput;
     std::vector<ProfileRow> profileRows;
+
+    std::string search;
+    bool searchFocused;
+    std::vector<int> searchResults;
 
     MouseState mouse;
     int hoverCacheCell;
@@ -111,12 +127,35 @@ private:
     float smokeTimer;
     bool fastSpeed;
 
+    int tab;
+    bool placingTroop;
+    int selectedTroopId;
+    std::vector<int> spellResults;
+    int placingSpell;
+    int placingTier;
+    float matchTime;
+    float playTime;
+    bool timeKnown;
+    bool recordDone;
+    int lastScore;
+    RecordResult lastResult;
+    MapRecord lastBest;
+    std::string mapSearch;
+    std::vector<int> mapResults;
+    int mapSelected;
+    int savedWaves[ProfileManager::MAX_MAP_SAVES];
+    bool textInputOn;
+
     void resetMatch();
-    void startNewGame();
+    void startNewGame(int level);
+    void openMapSelect();
     void refreshViews();
     void mergePending();
     void removeDead();
     int aliveEnemyCount() const;
+    int activeDrones() const;
+    void sendDrone(DroneKind kind);
+    void updateDanger();
 
     Tower* towerAt(int cx, int cy) const;
     Tower* selectedTower() const;
@@ -130,8 +169,41 @@ private:
     void cancelPlacement();
     void onEnemyKilled(Enemy& enemy);
 
+    void setSearchFocus(bool focus);
+    void updateSearch();
+    void handleSearchKey(SDL_Keycode k);
+    void syncTextInput();
+
+    void pickTroop();
+    void tryPlaceTroop(int cx, int cy);
+    std::string troopProblem(int cx, int cy) const;
+    Troop* troopAt(int cell) const;
+    Troop* selectedTroop() const;
+    int activeTroops() const;
+    bool troopBlocksCell(int cell) const;
+    void pickSpell(int kind, int tier);
+    void cycleSpell(int kind);
+    bool castSpell(int cx, int cy);
+    void drawZones(bool flames);
+    void drawSpellPreview(int cx, int cy, bool ground);
+    void drawTip(const std::string& why, float wx, float wy);
+    bool mouseCell(int& cx, int& cy) const;
+    void drawPlacementGround();
+    void drawPlacementGhost();
+    void drawSortedObjects();
+
+    void finishMatch(bool won);
+    EndStats buildEndStats() const;
+    void updateMapSearch();
+    void selectMapRow(int row);
+    void handleMapSelectKey(SDL_Keycode k);
+    void handleMapSelectClick();
+    MapSelectView buildMapView() const;
+
     void saveGame();
-    void loadGame();
+    void loadGame(int level);
+    void refreshSavedMaps();
+    void continueFromMenu();
     bool inMenus() const;
     std::string activeName() const;
     void openProfiles();
@@ -153,8 +225,8 @@ private:
 
     PanelModel buildPanelModel() const;
     void drawBattlefield();
+    void drawDanger();
     void drawEntities(int layer) const;
-    void drawPlacementPreview();
     void drawSelectedRange();
     void drawBanner();
     void drawMessage();
