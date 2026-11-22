@@ -22,6 +22,8 @@ public:
     float healthFraction() const;
 
     bool takeDamage(int amount);
+    int heal(int amount);
+    void restoreHealth(int value);
     void destroy();
 
 protected:

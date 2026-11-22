@@ -22,6 +22,18 @@ bool Entity::takeDamage(int amount) {
     return false;
 }
 
+int Entity::heal(int amount) {
+    if (!alive || amount <= 0) return 0;
+    int before = health;
+    health = std::min(maxHealth, health + amount);
+    return health - before;
+}
+
+void Entity::restoreHealth(int value) {
+    if (!alive) return;
+    health = std::clamp(value, 1, maxHealth);
+}
+
 void Entity::destroy() {
     alive = false;
 }
