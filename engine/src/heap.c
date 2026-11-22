@@ -40,7 +40,9 @@ int heap_pop( Heap * h, HeapItem * out ){
     int i=0 ;
 
     while(1) {
-        if(  (((i+1)*2-1)<h->size) && ( h->items[i].priority>h->items[(i+1)*2 -1 ].priority ) && (((i+1)*2 >= h->size) || (h->items[(i+1)*2 - 1].priority <= h->items[(i+1)*2].priority)) ){
+        if((((i+1)*2-1)<h->size) && ( h->items[i].priority>h->items[(i+1)*2 -1 ].priority ) && 
+        (((i+1)*2 >= h->size) || 
+        (h->items[(i+1)*2 - 1].priority <= h->items[(i+1)*2].priority)) ){
             swap(&h->items[i], & h->items[(i+1)*2 -1]);
             i=(i+1)*2-1; 
         }
