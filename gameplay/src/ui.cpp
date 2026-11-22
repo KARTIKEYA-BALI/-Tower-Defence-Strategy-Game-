@@ -16,7 +16,9 @@ bool Button::contains(float mx, float my) const {
 void Button::draw(Gfx& g, const MouseState& mouse, const std::string& subLabel) const {
     bool hover = enabled && contains(mouse.x, mouse.y);
     bool pressed = hover && mouse.down;
-    float y = rect.y + (pressed ? 1.0f : 0.0f);
+    const float lip = 4.0f;
+    const float faceH = rect.h - lip;
+    float y = rect.y + (pressed ? lip - 1.0f : 0.0f);
     const float r = 8.0f;
 
     Color top;
@@ -54,17 +56,20 @@ void Button::draw(Gfx& g, const MouseState& mouse, const std::string& subLabel) 
         bottom = shade(bottom, 0.9f);
     }
 
-    if (enabled && !pressed) g.glow(rect.x + rect.w * 0.5f, rect.y + rect.h + 1.0f, rect.w * 0.55f, 7.0f, rgba(0, 0, 0, 110));
-    g.fillRoundRect(rect.x - 1.0f, y - 1.0f, rect.w + 2.0f, rect.h + 2.0f, r + 1.0f, border);
-    g.fillRoundRectGradient(rect.x, y, rect.w, rect.h, r, top, bottom);
-    g.fillRoundRect(rect.x + 3.0f, y + 1.0f, rect.w - 6.0f, 1.2f, 0.6f, rgba(255, 255, 255, enabled ? 60 : 15));
+    if (enabled) g.glow(rect.x + rect.w * 0.5f, rect.y + rect.h + 2.0f, rect.w * 0.55f, 8.0f, rgba(0, 0, 0, 120));
+    g.fillRoundRect(rect.x - 1.0f, rect.y + lip - 1.0f, rect.w + 2.0f, faceH + 2.0f, r + 1.0f, shade(border, 0.7f));
+    g.fillRoundRect(rect.x, rect.y + lip, rect.w, faceH, r, shade(bottom, 0.5f));
+    g.fillRoundRect(rect.x - 1.0f, y - 1.0f, rect.w + 2.0f, faceH + 2.0f, r + 1.0f, border);
+    g.fillRoundRectGradient(rect.x, y, rect.w, faceH, r, top, bottom);
+    g.fillRoundRect(rect.x + 4.0f, y + 1.5f, rect.w - 8.0f, faceH * 0.38f, r * 0.7f, rgba(255, 255, 255, enabled ? 26 : 8));
+    g.fillRoundRect(rect.x + 3.0f, y + 1.0f, rect.w - 6.0f, 1.2f, 0.6f, rgba(255, 255, 255, enabled ? 70 : 15));
 
     float cx = rect.x + rect.w * 0.5f;
     if (subLabel.empty()) {
-        g.textCentered(FontId::BodyBold, label, cx, y + rect.h * 0.5f + 0.5f, text);
+        g.textCentered(FontId::BodyBold, label, cx, y + faceH * 0.5f + 0.5f, text);
     } else {
-        g.textCentered(FontId::BodyBold, label, cx, y + rect.h * 0.5f - 6.5f, text);
-        g.textCentered(FontId::Small, subLabel, cx, y + rect.h * 0.5f + 8.5f, withAlpha(text, 200));
+        g.textCentered(FontId::BodyBold, label, cx, y + faceH * 0.5f - 6.0f, text);
+        g.textCentered(FontId::Small, subLabel, cx, y + faceH * 0.5f + 8.0f, withAlpha(text, 200));
     }
 }
 
@@ -82,7 +87,8 @@ void TextBox::draw(Gfx& g, const std::string& text, bool focused, const MouseSta
     bool hover = contains(mouse.x, mouse.y);
     Color border = focused ? pal::gold : (hover ? rgba(96, 108, 140) : pal::uiLine);
     g.fillRoundRect(rect.x - 1.0f, rect.y - 1.0f, rect.w + 2.0f, rect.h + 2.0f, 8.0f, border);
-    g.fillRoundRectGradient(rect.x, rect.y, rect.w, rect.h, 7.0f, rgba(14, 17, 26), rgba(22, 26, 38));
+    g.fillRoundRectGradient(rect.x, rect.y, rect.w, rect.h, 7.0f, rgba(8, 10, 16), rgba(24, 28, 40));
+    g.fillRoundRect(rect.x + 2.0f, rect.y + 1.0f, rect.w - 4.0f, 3.0f, 1.5f, rgba(0, 0, 0, 90));
     if (searchIcon) icons::magnifier(g, rect.x + 15.0f, rect.y + rect.h * 0.5f, 10.0f, focused ? pal::gold : pal::uiMuted);
     float tx = rect.x + (searchIcon ? 28.0f : 12.0f);
     float ty = rect.y + rect.h * 0.5f;
