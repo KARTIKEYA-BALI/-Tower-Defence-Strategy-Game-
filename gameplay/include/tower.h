@@ -33,14 +33,23 @@ public:
     void upgrade();
     void setLevel(int newLevel);
 
+    int ammoCrate() const;
+    int repairAmount() const;
+    int resupply(int amount);
+    void setAmmo(int amount);
+
     void setSelected(bool s) { selected = s; }
 
     static int upgradeCostFor(const TowerType& type, int level);
     static int damageFor(const TowerType& type, int level);
     static float rangeFor(const TowerType& type, int level);
     static float fireRateFor(const TowerType& type, int level);
-    static void drawModel(Gfx& g, int typeId, float cx, float cy, float scale, float aim, int level, float recoil,
+    static void drawModel(Gfx& g, int typeId, float wx, float wy, float scale, float aim, int level, float recoil,
                           bool loaded);
+    static void drawIcon(Gfx& g, int typeId, float cx, float cy, float scale, float aim);
+
+protected:
+    void onDamaged(int amount) override;
 
 private:
     int objectId;
@@ -52,7 +61,7 @@ private:
     AmmoStore ammo;
     TargetingModule targeting;
     float cooldown;
-    float regenTimer;
+    float hitFlash;
     float aim;
     float recoil;
     bool selected;

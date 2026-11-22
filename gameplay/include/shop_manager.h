@@ -18,7 +18,7 @@ struct TowerType {
     float projectileSpeed;
     ProjectileKind projectile;
     int ammoMax;
-    float ammoRegenSeconds;
+    int health;
     int startScore;
     std::string blurb;
 };

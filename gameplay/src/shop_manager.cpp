@@ -1,13 +1,13 @@
 #include "shop_manager.h"
 
 ShopManager::ShopManager() {
-    types.push_back({0, "cannon", "Cannon", 50, 20, 120.0f, 1.0f, 26.0f, 360.0f, ProjectileKind::Cannonball, 12, 1.2f, 8,
+    types.push_back({0, "cannon", "Cannon", 50, 20, 120.0f, 1.0f, 26.0f, 360.0f, ProjectileKind::Cannonball, 38, 175, 8,
                      "Iron shot with a small blast."});
-    types.push_back({1, "catapult", "Catapult", 80, 40, 180.0f, 0.5f, 58.0f, 260.0f, ProjectileKind::Boulder, 6, 2.4f, 10,
+    types.push_back({1, "catapult", "Catapult", 80, 40, 180.0f, 0.5f, 58.0f, 260.0f, ProjectileKind::Boulder, 18, 150, 10,
                      "Lobs boulders that crush groups."});
-    types.push_back({2, "crossbow", "Crossbow", 60, 10, 150.0f, 2.0f, 0.0f, 560.0f, ProjectileKind::Bolt, 24, 0.6f, 6,
+    types.push_back({2, "crossbow", "Crossbow", 60, 10, 150.0f, 2.0f, 0.0f, 560.0f, ProjectileKind::Bolt, 75, 125, 6,
                      "Rapid bolts, great against runners."});
-    types.push_back({3, "archer", "Archer", 40, 8, 140.0f, 1.5f, 0.0f, 470.0f, ProjectileKind::Arrow, 20, 0.8f, 4,
+    types.push_back({3, "archer", "Archer", 40, 8, 140.0f, 1.5f, 0.0f, 470.0f, ProjectileKind::Arrow, 60, 100, 4,
                      "Cheap and steady. Build many."});
 }
 

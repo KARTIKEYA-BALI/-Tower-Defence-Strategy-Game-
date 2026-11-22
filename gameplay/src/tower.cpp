@@ -53,136 +53,8 @@ void stoneBase(Gfx& g, float cx, float cy, float s) {
     }
 }
 
-}
-
-Tower::Tower(int id, const TowerType& t, int cx, int cy)
-    : Entity(cx * CELL_SIZE + CELL_SIZE * 0.5f, cy * CELL_SIZE + CELL_SIZE * 0.5f, 1), objectId(id), type(t), cellX(cx),
-      cellY(cy), level(1), invested(t.cost), ammo(t.ammoMax), cooldown(0.2f), regenTimer(0.0f), aim(-PI_F * 0.5f),
-      recoil(0.0f), selected(false) {
-}
-
-int Tower::damageFor(const TowerType& t, int lvl) {
-    return static_cast<int>(std::lround(t.damage * (1.0f + 0.35f * (lvl - 1))));
-}
-
-float Tower::rangeFor(const TowerType& t, int lvl) {
-    return t.range * (1.0f + 0.12f * (lvl - 1));
-}
-
-float Tower::fireRateFor(const TowerType& t, int lvl) {
-    return t.fireRate * (1.0f + 0.08f * (lvl - 1));
-}
-
-int Tower::upgradeCostFor(const TowerType& t, int lvl) {
-    return static_cast<int>(std::lround(t.cost * 0.6f * lvl));
-}
-
-int Tower::damage() const {
-    return damageFor(type, level);
-}
-
-float Tower::range() const {
-    return rangeFor(type, level);
-}
-
-float Tower::fireRate() const {
-    return fireRateFor(type, level);
-}
-
-int Tower::upgradeCost() const {
-    return upgradeCostFor(type, level);
-}
-
-int Tower::sellValue() const {
-    return invested / 2;
-}
-
-void Tower::upgrade() {
-    if (!canUpgrade()) return;
-    invested += upgradeCost();
-    level++;
-    ammo.setMax(type.ammoMax + (level - 1) * type.ammoMax / 4);
-    ammo.refillFull();
-}
-
-void Tower::setLevel(int newLevel) {
-    newLevel = std::clamp(newLevel, 1, MAX_LEVEL);
-    while (level < newLevel) upgrade();
-}
-
-void Tower::update(float dt, Game& game) {
-    cooldown = std::max(0.0f, cooldown - dt);
-    recoil = std::max(0.0f, recoil - dt * 3.0f);
-
-    if (!ammo.full()) {
-        regenTimer += dt;
-        if (regenTimer >= type.ammoRegenSeconds) {
-            regenTimer = 0.0f;
-            ammo.refill(1);
-        }
-    } else {
-        regenTimer = 0.0f;
-    }
-
-    Enemy* target = targeting.pickTarget(game, x, y, range());
-    if (!target) return;
-
-    float want = std::atan2(target->getY() - y, target->getX() - x);
-    float turnRate = (type.projectile == ProjectileKind::Boulder) ? 5.0f : 11.0f;
-    float diff = wrapAngle(want - aim);
-    float stepTurn = turnRate * dt;
-    if (std::fabs(diff) <= stepTurn) aim = want;
-    else aim = wrapAngle(aim + (diff > 0 ? stepTurn : -stepTurn));
-
-    if (cooldown <= 0.0f && std::fabs(wrapAngle(want - aim)) < 0.35f) {
-        if (ammo.use()) {
-            fire(game, *target);
-            cooldown = 1.0f / fireRate();
-        }
-    }
-}
-
-void Tower::fire(Game& game, const Enemy& target) {
-    recoil = 1.0f;
-    float mx = x + std::cos(aim) * 18.0f;
-    float my = y + std::sin(aim) * 18.0f;
-    float tx = target.getX();
-    float ty = target.getY();
-    if (type.projectile == ProjectileKind::Boulder) {
-        float dx = tx - x;
-        float dy = ty - y;
-        float flight = std::clamp(std::sqrt(dx * dx + dy * dy) / type.projectileSpeed, 0.55f, 1.0f);
-        tx += target.getVelX() * flight;
-        ty += target.getVelY() * flight;
-        mx = x;
-        my = y;
-    }
-    game.addEntity(std::make_unique<Projectile>(type.projectile, mx, my, target.getId(), tx, ty, damage(), type.splash,
-                                                type.projectileSpeed));
-    if (type.projectile == ProjectileKind::Cannonball) {
-        game.fx().flash(mx, my, rgba(255, 210, 120));
-        game.fx().smoke(mx, my, 3);
-    } else if (type.projectile == ProjectileKind::Boulder) {
-        game.fx().smoke(x, y, 2);
-    }
-}
-
-void Tower::drawModel(Gfx& g, int typeId, float cx, float cy, float s, float aim, int level, float recoil, bool loaded) {
-    g.glow(cx + 2.0f * s, cy + 5.0f * s, 25.0f * s, 16.0f * s, rgba(0, 0, 0, 130));
+void drawTurret(Gfx& g, int typeId, float cx, float cy, float s, float aim, float recoil, bool loaded) {
     Local L(cx, cy, s, aim);
-
-    if (typeId == 3) {
-        g.fillCircle(cx, cy, 20.0f * s, pal::woodDark);
-        g.fillCircleGradient(cx, cy - 1.0f * s, 17.5f * s, shade(pal::wood, 1.12f), shade(pal::wood, 0.92f));
-        g.strokeCircle(cx, cy, 13.0f * s, 1.2f * s, withAlpha(pal::woodDark, 170));
-        for (int i = 0; i < 10; i++) {
-            float a = i * PI_F / 5.0f;
-            g.fillCircle(cx + std::cos(a) * 18.0f * s, cy + std::sin(a) * 18.0f * s, 2.2f * s, shade(pal::wood, 1.25f));
-        }
-    } else {
-        stoneBase(g, cx, cy, s);
-    }
-
     if (typeId == 0) {
         float back = recoil * 4.0f;
         g.fillPolygon(L.rect(-2.0f - back, -5.0f, 21.0f - back, 5.0f), shade(pal::iron, 0.9f));
@@ -258,6 +130,151 @@ void Tower::drawModel(Gfx& g, int typeId, float cx, float cy, float s, float aim
         }
     }
 
+}
+
+
+}
+
+Tower::Tower(int id, const TowerType& t, int cx, int cy)
+    : Entity(cx * CELL_SIZE + CELL_SIZE * 0.5f, cy * CELL_SIZE + CELL_SIZE * 0.5f, t.health), objectId(id), type(t),
+      cellX(cx), cellY(cy), level(1), invested(t.cost), ammo(t.ammoMax), cooldown(0.2f), hitFlash(0.0f),
+      aim(-PI_F * 0.5f), recoil(0.0f), selected(false) {
+}
+
+int Tower::damageFor(const TowerType& t, int lvl) {
+    return static_cast<int>(std::lround(t.damage * (1.0f + 0.35f * (lvl - 1))));
+}
+
+float Tower::rangeFor(const TowerType& t, int lvl) {
+    return t.range * (1.0f + 0.12f * (lvl - 1));
+}
+
+float Tower::fireRateFor(const TowerType& t, int lvl) {
+    return t.fireRate * (1.0f + 0.08f * (lvl - 1));
+}
+
+int Tower::upgradeCostFor(const TowerType& t, int lvl) {
+    return static_cast<int>(std::lround(t.cost * 0.6f * lvl));
+}
+
+int Tower::damage() const {
+    return damageFor(type, level);
+}
+
+float Tower::range() const {
+    return rangeFor(type, level);
+}
+
+float Tower::fireRate() const {
+    return fireRateFor(type, level);
+}
+
+int Tower::upgradeCost() const {
+    return upgradeCostFor(type, level);
+}
+
+int Tower::sellValue() const {
+    return invested / 2;
+}
+
+void Tower::upgrade() {
+    if (!canUpgrade()) return;
+    invested += upgradeCost();
+    level++;
+    int oldMax = ammo.max();
+    ammo.setMax(type.ammoMax + (level - 1) * type.ammoMax / 4);
+    ammo.refill(ammo.max() - oldMax);
+}
+
+void Tower::setLevel(int newLevel) {
+    newLevel = std::clamp(newLevel, 1, MAX_LEVEL);
+    while (level < newLevel) upgrade();
+}
+
+int Tower::ammoCrate() const {
+    return (ammo.max() + 1) / 2;
+}
+
+int Tower::repairAmount() const {
+    return (getMaxHealth() + 1) / 2;
+}
+
+int Tower::resupply(int amount) {
+    int before = ammo.current();
+    ammo.refill(amount);
+    return ammo.current() - before;
+}
+
+void Tower::setAmmo(int amount) {
+    ammo.setCurrent(amount);
+}
+
+void Tower::onDamaged(int) {
+    hitFlash = 0.18f;
+}
+
+void Tower::update(float dt, Game& game) {
+    cooldown = std::max(0.0f, cooldown - dt);
+    recoil = std::max(0.0f, recoil - dt * 3.0f);
+    hitFlash = std::max(0.0f, hitFlash - dt);
+
+    Enemy* target = targeting.pickTarget(game, x, y, range());
+    if (!target) return;
+
+    float want = std::atan2(target->getY() - y, target->getX() - x);
+    float turnRate = (type.projectile == ProjectileKind::Boulder) ? 5.0f : 11.0f;
+    float diff = wrapAngle(want - aim);
+    float stepTurn = turnRate * dt;
+    if (std::fabs(diff) <= stepTurn) aim = want;
+    else aim = wrapAngle(aim + (diff > 0 ? stepTurn : -stepTurn));
+
+    if (cooldown <= 0.0f && std::fabs(wrapAngle(want - aim)) < 0.35f) {
+        if (ammo.use()) {
+            fire(game, *target);
+            cooldown = 1.0f / fireRate();
+        }
+    }
+}
+
+void Tower::fire(Game& game, const Enemy& target) {
+    recoil = 1.0f;
+    float mx = x + std::cos(aim) * 18.0f;
+    float my = y + std::sin(aim) * 18.0f;
+    float tx = target.getX();
+    float ty = target.getY();
+    if (type.projectile == ProjectileKind::Boulder) {
+        float dx = tx - x;
+        float dy = ty - y;
+        float flight = std::clamp(std::sqrt(dx * dx + dy * dy) / type.projectileSpeed, 0.55f, 1.0f);
+        tx += target.getVelX() * flight;
+        ty += target.getVelY() * flight;
+        mx = x;
+        my = y;
+    }
+    game.addEntity(std::make_unique<Projectile>(type.projectile, mx, my, target.getId(), tx, ty, damage(), type.splash,
+                                                type.projectileSpeed));
+    if (type.projectile == ProjectileKind::Cannonball) {
+        game.fx().flash(mx, my, rgba(255, 210, 120));
+        game.fx().smoke(mx, my, 3);
+    } else if (type.projectile == ProjectileKind::Boulder) {
+        game.fx().smoke(x, y, 2);
+    }
+}
+
+void Tower::drawModel(Gfx& g, int typeId, float cx, float cy, float s, float aim, int level, float recoil, bool loaded) {
+    g.glow(cx + 2.0f * s, cy + 5.0f * s, 25.0f * s, 16.0f * s, rgba(0, 0, 0, 130));
+    if (typeId == 3) {
+        g.fillCircle(cx, cy, 20.0f * s, pal::woodDark);
+        g.fillCircleGradient(cx, cy - 1.0f * s, 17.5f * s, shade(pal::wood, 1.12f), shade(pal::wood, 0.92f));
+        g.strokeCircle(cx, cy, 13.0f * s, 1.2f * s, withAlpha(pal::woodDark, 170));
+        for (int i = 0; i < 10; i++) {
+            float a = i * PI_F / 5.0f;
+            g.fillCircle(cx + std::cos(a) * 18.0f * s, cy + std::sin(a) * 18.0f * s, 2.2f * s, shade(pal::wood, 1.25f));
+        }
+    } else {
+        stoneBase(g, cx, cy, s);
+    }
+    drawTurret(g, typeId, cx, cy, s, aim, recoil, loaded);
     if (level > 1) {
         float total = (level - 1) * 9.0f * s;
         for (int i = 0; i < level; i++) {
@@ -271,7 +288,13 @@ void Tower::drawModel(Gfx& g, int typeId, float cx, float cy, float s, float aim
     }
 }
 
+void Tower::drawIcon(Gfx& g, int typeId, float cx, float cy, float scale, float aim) {
+    g.useScreen();
+    drawModel(g, typeId, cx, cy, scale, aim, 1, 0.0f, true);
+}
+
 void Tower::draw(Gfx& g) const {
+    g.useGround(0.0f);
     if (selected) {
         float pulse = 0.5f + 0.5f * std::sin(g.time() * 5.0f);
         g.strokeCircle(x, y, 23.0f + pulse * 1.5f, 2.0f, withAlpha(pal::gold, 200));
@@ -280,6 +303,18 @@ void Tower::draw(Gfx& g) const {
     if (type.projectile == ProjectileKind::Boulder) loaded = cooldown <= (1.0f / fireRate()) * 0.45f && !ammo.empty();
     if (ammo.empty()) loaded = false;
     drawModel(g, type.typeId, x, y, 1.0f, aim, level, recoil, loaded);
+    if (hitFlash > 0.0f) {
+        g.fillCircle(x, y, 20.0f, rgba(255, 120, 80, static_cast<int>(150 * std::min(1.0f, hitFlash / 0.18f))));
+    }
+
+    if (getHealth() < getMaxHealth()) {
+        float w = 32.0f;
+        float bx = x - w * 0.5f;
+        float by = y - 31.0f;
+        float f = healthFraction();
+        g.fillRoundRect(bx - 1.0f, by - 1.0f, w + 2.0f, 6.0f, 3.0f, rgba(10, 10, 14, 210));
+        g.fillRoundRect(bx, by, std::max(2.0f, w * f), 4.0f, 2.0f, mix(rgba(236, 70, 58), pal::good, f));
+    }
 
     if (!ammo.full()) {
         float w = 30.0f;
@@ -294,4 +329,5 @@ void Tower::draw(Gfx& g) const {
         g.fillCircle(x + 15.0f, y - 15.0f, 6.5f, withAlpha(pal::danger, static_cast<int>(150 + 100 * blink)));
         g.textCentered(FontId::SmallBold, "!", x + 15.0f, y - 15.5f, pal::uiText);
     }
+    g.useScreen();
 }
