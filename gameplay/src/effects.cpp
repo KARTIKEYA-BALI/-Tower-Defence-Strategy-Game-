@@ -13,17 +13,19 @@ float Effects::rnd(float lo, float hi) {
 }
 
 void Effects::add(const Particle& p) {
-    if (particles.size() < MAX_PARTICLES) particles.push_back(p);
+    if (particles.size() < MAX_PARTICLES) particles.push_back({p, p.x, p.y});
 }
 
 void Effects::clear() {
     particles.clear();
     rings.clear();
     texts.clear();
+    streaks.clear();
 }
 
 void Effects::update(float dt) {
-    for (Particle& p : particles) {
+    for (Spark& sp : particles) {
+        Particle& p = sp.p;
         p.life -= dt;
         float d = std::max(0.0f, 1.0f - p.drag * dt);
         p.vx *= d;
@@ -33,7 +35,7 @@ void Effects::update(float dt) {
         p.y += p.vy * dt;
         p.size = std::max(0.0f, p.size + p.grow * dt);
     }
-    particles.erase(std::remove_if(particles.begin(), particles.end(), [](const Particle& p) { return p.life <= 0.0f; }),
+    particles.erase(std::remove_if(particles.begin(), particles.end(), [](const Spark& s) { return s.p.life <= 0.0f; }),
                     particles.end());
     for (Ring& r : rings) r.life -= dt;
     rings.erase(std::remove_if(rings.begin(), rings.end(), [](const Ring& r) { return r.life <= 0.0f; }), rings.end());
@@ -43,9 +45,13 @@ void Effects::update(float dt) {
     }
     texts.erase(std::remove_if(texts.begin(), texts.end(), [](const FloatingText& t) { return t.life <= 0.0f; }),
                 texts.end());
+    for (Streak& s : streaks) s.life -= dt;
+    streaks.erase(std::remove_if(streaks.begin(), streaks.end(), [](const Streak& s) { return s.life <= 0.0f; }),
+                  streaks.end());
 }
 
 void Effects::draw(Gfx& g) const {
+    g.useGround(0.0f);
     for (const Ring& r : rings) {
         float t = 1.0f - r.life / r.maxLife;
         float radius = r.r0 + (r.r1 - r.r0) * (1.0f - (1.0f - t) * (1.0f - t));
@@ -53,17 +59,31 @@ void Effects::draw(Gfx& g) const {
         g.glow(r.x, r.y, radius, radius * 0.8f, withAlpha(r.color, a / 3));
         g.strokeCircle(r.x, r.y, radius, 3.0f * (1.0f - t) + 1.0f, withAlpha(r.color, a));
     }
-    for (const Particle& p : particles) {
+    g.useScreen();
+    for (const Streak& s : streaks) {
+        float t = std::clamp(s.life / s.maxLife, 0.0f, 1.0f);
+        float hx = s.x1 + (s.x0 - s.x1) * t;
+        float hy = s.y1 + (s.y0 - s.y1) * t;
+        SDL_FPoint a = g.project(s.x0 + (hx - s.x0) * 0.4f, s.y0 + (hy - s.y0) * 0.4f, 14.0f);
+        SDL_FPoint b = g.project(hx, hy, 14.0f);
+        g.line(a.x, a.y, b.x, b.y, 2.4f, withAlpha(s.color, static_cast<int>(200 * t)));
+        g.glow(b.x, b.y, 7.0f, 7.0f, withAlpha(s.color, 210));
+    }
+    for (const Spark& sp : particles) {
+        const Particle& p = sp.p;
         float t = std::clamp(p.life / p.maxLife, 0.0f, 1.0f);
         Color c = withAlpha(p.color, static_cast<int>(p.color.a * t));
+        g.useBillboard(sp.ax, sp.ay, 10.0f);
         if (p.additive) g.glow(p.x, p.y, p.size * 2.2f, p.size * 2.2f, c);
         else g.fillCircle(p.x, p.y, std::max(0.4f, p.size), c);
     }
     for (const FloatingText& t : texts) {
         float k = std::clamp(t.life / t.maxLife, 0.0f, 1.0f);
         float a = k > 0.3f ? 1.0f : k / 0.3f;
+        g.useBillboard(t.ax, t.ay, 26.0f);
         g.text(FontId::BodyBold, t.text, t.x, t.y, withAlpha(t.color, static_cast<int>(255 * a)), Align::Center, true);
     }
+    g.useScreen();
 }
 
 void Effects::sparks(float x, float y, Color c) {
@@ -121,7 +141,7 @@ void Effects::death(float x, float y, Color body, float size) {
 }
 
 void Effects::floatText(float x, float y, const std::string& text, Color c) {
-    texts.push_back({x, y, 1.0f, 1.0f, text, c});
+    texts.push_back({x, y, 1.0f, 1.0f, text, c, x, y});
 }
 
 void Effects::rubble(float x, float y) {
@@ -132,4 +152,8 @@ void Effects::rubble(float x, float y) {
              -1.0f, 2.0f, 320.0f, shade({150, 150, 156, 255}, rnd(0.6f, 1.1f)), false});
     }
     rings.push_back({x, y, 8.0f, 46.0f, 0.4f, 0.4f, rgba(240, 80, 60, 200)});
+}
+
+void Effects::streak(float x0, float y0, float x1, float y1, Color c) {
+    streaks.push_back({x0, y0, x1, y1, 0.22f, 0.22f, c});
 }

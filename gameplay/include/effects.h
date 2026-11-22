@@ -19,6 +19,7 @@ public:
     void death(float x, float y, Color body, float size);
     void floatText(float x, float y, const std::string& text, Color c);
     void rubble(float x, float y);
+    void streak(float x0, float y0, float x1, float y1, Color c);
 
 private:
     struct Particle {
@@ -37,11 +38,21 @@ private:
         float x, y, life, maxLife;
         std::string text;
         Color color;
+        float ax, ay;
+    };
+    struct Spark {
+        Particle p;
+        float ax, ay;
+    };
+    struct Streak {
+        float x0, y0, x1, y1, life, maxLife;
+        Color color;
     };
 
-    std::vector<Particle> particles;
+    std::vector<Spark> particles;
     std::vector<Ring> rings;
     std::vector<FloatingText> texts;
+    std::vector<Streak> streaks;
 
     static float rnd(float lo, float hi);
     void add(const Particle& p);
