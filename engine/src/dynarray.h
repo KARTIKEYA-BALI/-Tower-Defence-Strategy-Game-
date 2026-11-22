@@ -14,7 +14,4 @@ int intarray_get(const IntArray *a ,int index, int *  out);
 void intarray_clear(IntArray *a ); 
 void intarray_free(IntArray *a ) ;
 
-
-
-
 #endif 

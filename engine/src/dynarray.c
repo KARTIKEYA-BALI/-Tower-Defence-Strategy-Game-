@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "dynarray.h"
 
-int intarray_init(IntArray * a ,int initial_capacity) {
+int intarray_init(IntArray * a,int initial_capacity) {
     if(initial_capacity<=0) return 0 ;
     a->data=(int *) malloc(sizeof(int)*initial_capacity);
     a->capacity=initial_capacity;
@@ -12,7 +12,7 @@ int intarray_init(IntArray * a ,int initial_capacity) {
     return 1; 
 }
 
-int intarray_push(IntArray * a , int value){
+int intarray_push(IntArray *a, int value){
     if(a->size==a->capacity) {
         int * new_point;
         a->capacity = (a->capacity==0) ? 4:a->capacity*2 ;
@@ -26,7 +26,7 @@ int intarray_push(IntArray * a , int value){
 
 }
 
-int intarray_get(const IntArray *a ,int index, int *  out){
+int intarray_get(const IntArray *a,int index, int *out){
     if(index<0 || index>=a->size) return 0 ;
 
     *(out)=*(a->data+index);
