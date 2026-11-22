@@ -2,9 +2,12 @@
 #ifndef ROUTER_H
 #define ROUTER_H
 #define ROUTE_UNREACHABLE -1
+#define DRONE_DANGER_WEIGHT 6
 int route_path_exists(const Grid *g,int start ,int goal) ;
-int route_can_place(Grid *g,int x , int y ,int start ,int goal); 
+int route_can_place(Grid *g,int x , int y ,int start ,int goal);
 int route_build_distance_field(const Grid *g, int goal , int dist[]) ;
 int route_next_step(const Grid *g, const int dist[], int cell);
+int route_drone_path(const Grid *g, int start, int goal, int out[], int max_len);
+int route_walk_path(const Grid *g, int start, int goal, int out[], int max_len);
 
-#endif 
+#endif 
