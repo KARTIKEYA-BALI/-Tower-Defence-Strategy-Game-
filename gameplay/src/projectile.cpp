@@ -87,20 +87,25 @@ void Projectile::impact(Game& game) {
 void Projectile::draw(Gfx& g) const {
     switch (kind) {
     case ProjectileKind::Cannonball:
-        g.glow(x + 1.0f, y + 4.0f, 5.0f, 2.5f, rgba(0, 0, 0, 90));
+        g.useGround(0.0f);
+        g.glow(x + 1.0f, y + 1.0f, 6.0f, 6.0f, rgba(0, 0, 0, 90));
+        g.useBillboard(x, y, 18.0f);
         g.fillCircle(x, y, 4.4f, rgba(30, 32, 38));
         g.fillCircle(x - 1.2f, y - 1.2f, 1.6f, rgba(150, 154, 166));
         break;
     case ProjectileKind::Boulder: {
         float shadowR = 6.0f - height * 0.05f;
-        g.glow(x, y + 3.0f, std::max(3.0f, shadowR * 1.4f), std::max(2.0f, shadowR * 0.7f), rgba(0, 0, 0, 110));
-        float by = y - height;
+        g.useGround(0.0f);
+        g.glow(x, y, std::max(3.0f, shadowR * 1.4f), std::max(3.0f, shadowR * 1.4f), rgba(0, 0, 0, 110));
+        g.useBillboard(x, y, 18.0f + height);
+        float by = y;
         float r = 6.5f + height * 0.03f;
         g.fillCircleGradient(x - 1.0f, by - 1.0f, r, pal::stoneLight, pal::stoneDark);
         g.strokeArc(x, by, r * 0.55f, elapsed * 9.0f, elapsed * 9.0f + 1.6f, 1.2f, withAlpha(pal::stoneDark, 200));
         break;
     }
     case ProjectileKind::Bolt: {
+        g.useGround(16.0f);
         float tx = x - dirX * 16.0f;
         float ty = y - dirY * 16.0f;
         g.line(tx, ty, x, y, 2.4f, pal::woodDark);
@@ -111,6 +116,7 @@ void Projectile::draw(Gfx& g) const {
         break;
     }
     case ProjectileKind::Arrow: {
+        g.useGround(16.0f);
         float tx = x - dirX * 13.0f;
         float ty = y - dirY * 13.0f;
         g.line(tx, ty, x, y, 1.5f, rgba(206, 184, 140));
@@ -123,4 +129,5 @@ void Projectile::draw(Gfx& g) const {
         break;
     }
     }
+    g.useScreen();
 }
