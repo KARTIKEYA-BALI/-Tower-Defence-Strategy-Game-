@@ -45,6 +45,13 @@ Enemy* Game::findEnemy(int id) const {
     return nullptr;
 }
 
+Tower* Game::findTower(int id) const {
+    for (Tower* t : towers) {
+        if (t->getId() == id && t->isAlive()) return t;
+    }
+    return nullptr;
+}
+
 void Game::refreshViews() {
     enemies.clear();
     towers.clear();
@@ -275,6 +282,17 @@ void Game::damageCastle(int amount, float x, float y) {
     shake = std::min(9.0f, shake + 2.0f + amount * 0.3f);
     effects.rubble(x, y);
     effects.floatText(x, y - 40.0f, "-" + std::to_string(amount), pal::danger);
+}
+
+void Game::deliverDrone(Drone& d, Tower& t) {
+    if (d.getKind() == DroneKind::Ammo) {
+        int added = t.resupply(t.ammoCrate());
+        effects.floatText(t.getX(), t.getY() - 34.0f, "+" + std::to_string(added) + " ammo", pal::supply);
+    } else {
+        int healed = t.heal(t.repairAmount());
+        effects.floatText(t.getX(), t.getY() - 34.0f, "+" + std::to_string(healed) + " hp", pal::good);
+    }
+    effects.flash(t.getX(), t.getY() - 10.0f, rgba(200, 240, 255));
 }
 
 void Game::spawnEnemy(EnemyKind kind, float healthScale) {

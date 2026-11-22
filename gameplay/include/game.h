@@ -1,6 +1,7 @@
 #ifndef GAME_H
 #define GAME_H
 
+#include "drone.h"
 #include "effects.h"
 #include "enemy.h"
 #include "entity.h"
@@ -38,9 +39,11 @@ public:
     void addEntity(std::unique_ptr<Entity> e);
     const std::vector<Enemy*>& enemyList() const { return enemies; }
     Enemy* findEnemy(int id) const;
+    Tower* findTower(int id) const;
     void damageEnemy(Enemy& enemy, int amount);
     void splashDamage(float x, float y, float radius, int damage);
     void damageCastle(int amount, float x, float y);
+    void deliverDrone(Drone& drone, Tower& tower);
     Effects& fx() { return effects; }
 
     void spawnEnemy(EnemyKind kind, float healthScale);
