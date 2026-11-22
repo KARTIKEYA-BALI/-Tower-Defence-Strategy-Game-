@@ -950,9 +950,10 @@ void Game::drawBattlefield() {
 
     map.drawGround(gfx);
     if (state == GameState::Playing && placingType >= 0) map.drawGrid(gfx, 1.0f);
-    map.drawRoute(gfx);
-    map.drawRocks(gfx);
-    map.drawPortal(gfx);
+    map.drawPortals(gfx);
+    for (int cell = 0; cell < MAP_W * MAP_H; cell++) {
+        if (map.hasCellObject(cell)) map.drawCellObject(gfx, cell);
+    }
     drawEntities(0);
     if (!inMenus()) drawSelectedRange();
     drawEntities(1);

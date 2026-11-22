@@ -15,28 +15,37 @@ public:
     void syncWithEngine(Gfx& g);
     void invalidate();
 
+    static IsoView battlefieldView();
+    static constexpr float ISLAND_DEPTH = 42.0f;
+
+    void drawBackdrop(Gfx& g) const;
     void drawGround(Gfx& g) const;
     void drawGrid(Gfx& g, float alpha) const;
-    void drawRoute(Gfx& g) const;
-    void drawRocks(Gfx& g) const;
-    void drawPortal(Gfx& g) const;
+    void drawLava(Gfx& g) const;
+    bool hasCellObject(int cell) const;
+    void drawCellObject(Gfx& g, int cell) const;
+    void drawPortals(Gfx& g) const;
     void drawCastle(Gfx& g, float hitFlash) const;
     void drawVignette(Gfx& g) const;
+    void drawAmbient(Gfx& g) const;
 
-    int spawnCell() const { return spawn; }
+    int themeId() const { return theme; }
+
+    const std::vector<int>& spawnCells() const { return spawns; }
     int goalCell() const { return goal; }
 
 private:
     SDL_Texture* terrain;
     int types[MAP_W * MAP_H];
+    bool features[MAP_W * MAP_H];
+    int theme;
     bool valid;
     float builtScale;
-    int spawn;
+    std::vector<int> spawns;
     int goal;
-    std::vector<SDL_FPoint> route;
 
     void rebuildTerrain(Gfx& g);
-    void rebuildRoute();
+    void drawPortal(Gfx& g, int cell) const;
 };
 
 #endif
