@@ -5,12 +5,22 @@
 WaveManager::WaveManager()
     : current(1), active(false), finished(false), groupIndex(0), spawnedInGroup(0), spawnTimer(0.0f), autoTimer(-1.0f) {
     waves.push_back({{{EnemyKind::Grunt, 8, 1.0f}}, 1.0f, "The first raiders"});
-    waves.push_back({{{EnemyKind::Grunt, 8, 0.9f}, {EnemyKind::Runner, 6, 0.55f}}, 1.05f, "Runners on the flank"});
-    waves.push_back({{{EnemyKind::Grunt, 10, 0.8f}, {EnemyKind::Brute, 3, 1.6f}, {EnemyKind::Runner, 6, 0.5f}}, 1.15f,
+    waves.push_back({{{EnemyKind::Grunt, 8, 0.9f}, {EnemyKind::Runner, 6, 0.55f}, {EnemyKind::Raider, 2, 2.2f}}, 1.05f,
+                     "Raiders with torches"});
+    waves.push_back({{{EnemyKind::Grunt, 10, 0.8f},
+                      {EnemyKind::Raider, 3, 1.8f},
+                      {EnemyKind::Brute, 3, 1.6f},
+                      {EnemyKind::Runner, 6, 0.5f}},
+                     1.15f,
                      "Brutes at the gate"});
-    waves.push_back({{{EnemyKind::Runner, 10, 0.45f}, {EnemyKind::Grunt, 12, 0.7f}, {EnemyKind::Brute, 5, 1.4f}}, 1.3f,
+    waves.push_back({{{EnemyKind::Runner, 10, 0.45f},
+                      {EnemyKind::Raider, 4, 1.6f},
+                      {EnemyKind::Grunt, 12, 0.7f},
+                      {EnemyKind::Brute, 5, 1.4f}},
+                     1.3f,
                      "The horde grows"});
     waves.push_back({{{EnemyKind::Grunt, 12, 0.65f},
+                      {EnemyKind::Raider, 5, 1.4f},
                       {EnemyKind::Brute, 6, 1.3f},
                       {EnemyKind::Runner, 10, 0.4f},
                       {EnemyKind::Warlord, 1, 1.0f}},
