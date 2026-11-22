@@ -10,9 +10,13 @@ std::string SaveManager::toText(const SaveData& data) {
     out << "gold " << data.gold << "\n";
     out << "health " << data.health << "\n";
     out << "wave " << data.wave << "\n";
+    out << "level " << data.level << "\n";
+    if (data.timeMs >= 0) out << "time " << data.timeMs << "\n";
     for (const SavedTower& t : data.towers) {
-        out << "tower " << t.objectId << " " << t.typeId << " " << t.cellX << " " << t.cellY << " " << t.level << "\n";
+        out << "tower " << t.objectId << " " << t.typeId << " " << t.cellX << " " << t.cellY << " " << t.level << " "
+            << t.ammo << " " << t.health << "\n";
     }
+    for (const SavedTroop& t : data.troops) out << "troop " << t.cellX << " " << t.cellY << " " << t.health << "\n";
     return out.str();
 }
 
@@ -22,20 +26,34 @@ bool SaveManager::fromText(const std::string& text, SaveData& out) {
     if (!std::getline(in, line)) return false;
     if (!line.empty() && line.back() == '\r') line.pop_back();
     if (line != "SIEGE1") return false;
-    SaveData d = {0, 0, 1, {}};
+    SaveData d = {0, 0, 1, {}, 0, -1, {}};
     bool haveGold = false;
     bool haveHealth = false;
     bool haveWave = false;
     while (std::getline(in, line)) {
         std::istringstream ls(line);
         std::string key;
+        int value = 0;
         if (!(ls >> key)) continue;
         if (key == "gold") haveGold = static_cast<bool>(ls >> d.gold);
         else if (key == "health") haveHealth = static_cast<bool>(ls >> d.health);
         else if (key == "wave") haveWave = static_cast<bool>(ls >> d.wave);
-        else if (key == "tower") {
-            SavedTower t = {0, 0, 0, 0, 1};
-            if (ls >> t.objectId >> t.typeId >> t.cellX >> t.cellY >> t.level) d.towers.push_back(t);
+        else if (key == "time") {
+            if (ls >> value && value >= 0) d.timeMs = value;
+        } else if (key == "level") {
+            if (ls >> value) d.level = value;
+        } else if (key == "troop") {
+            SavedTroop t = {0, 0, -1};
+            if (ls >> t.cellX >> t.cellY) {
+                if (ls >> value) t.health = value;
+                d.troops.push_back(t);
+            }
+        } else if (key == "tower") {
+            SavedTower t = {0, 0, 0, 0, 1, -1, -1};
+            if (!(ls >> t.objectId >> t.typeId >> t.cellX >> t.cellY >> t.level)) continue;
+            if (ls >> value) t.ammo = value;
+            if (ls >> value) t.health = value;
+            d.towers.push_back(t);
         }
     }
     if (!haveGold || !haveHealth || !haveWave) return false;

@@ -11,6 +11,14 @@ struct SavedTower {
     int cellX;
     int cellY;
     int level;
+    int ammo;
+    int health;
+};
+
+struct SavedTroop {
+    int cellX;
+    int cellY;
+    int health;
 };
 
 struct SaveData {
@@ -18,6 +26,9 @@ struct SaveData {
     int health;
     int wave;
     std::vector<SavedTower> towers;
+    int level;
+    int timeMs;
+    std::vector<SavedTroop> troops;
 };
 
 class SaveManager {
