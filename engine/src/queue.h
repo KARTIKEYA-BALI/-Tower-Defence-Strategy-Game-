@@ -1,7 +1,7 @@
 #ifndef QUEUE_H 
 #define QUEUE_H
 
-typedef struct { 
+typedef struct{ 
     int type; 
     int entity_id;
     int cell ;

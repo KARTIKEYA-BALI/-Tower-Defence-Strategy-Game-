@@ -50,8 +50,7 @@ int queue_pop(Queue *q ,Event * out){
 
     * out =q->items[q->front ];
     q->front=(q->front+1) % (q->capacity);
-
-
+    
     return 1 ;
 
 }
