@@ -29,6 +29,9 @@ public:
     bool remove(int id);
 
     std::string savePath(int id) const;
+    std::string mapSavePath(int id, int level) const;
+    static constexpr int MAX_MAP_SAVES = 16;
+    std::string recordsPath(int id) const;
     std::string listPath() const { return folder + "profiles.txt"; }
 
     static bool validChar(char c);

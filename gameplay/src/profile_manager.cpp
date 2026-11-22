@@ -93,11 +93,21 @@ bool ProfileManager::remove(int id) {
         return false;
     }
     std::remove(savePath(id).c_str());
+    for (int level = 0; level < MAX_MAP_SAVES; level++) std::remove(mapSavePath(id, level).c_str());
+    std::remove(recordsPath(id).c_str());
     return true;
 }
 
 std::string ProfileManager::savePath(int id) const {
     return folder + "save_" + std::to_string(id) + ".dat";
+}
+
+std::string ProfileManager::mapSavePath(int id, int level) const {
+    return folder + "save_" + std::to_string(id) + "_map" + std::to_string(level) + ".dat";
+}
+
+std::string ProfileManager::recordsPath(int id) const {
+    return folder + "records_" + std::to_string(id) + ".txt";
 }
 
 bool ProfileManager::validChar(char c) {
