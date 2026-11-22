@@ -46,4 +46,8 @@ int grid_is_walkable(const Grid *g ,int x, int y) ;
 
 int grid_neighbours(const Grid * g, int cell , int out[4]);
 
+int grid_set_danger(Grid *g, int cell, int value);
+
+void grid_clear_danger(Grid *g);
+
 #endif

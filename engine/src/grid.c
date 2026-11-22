@@ -124,7 +124,19 @@ int grid_neighbours(const Grid * g, int cell , int out[4]){
 
 int grid_is_walkable(const Grid *g, int x, int y){
     if(grid_in_bounds(g,x,y) && (g->cells[grid_index(g,x,y)].terrain!=CELL_BLOCKED) && g->cells[grid_index(g,x,y)].tower_id==-1){
-        return 1; 
+        return 1;
     }
     else return 0 ;
+}
+
+int grid_set_danger(Grid *g, int cell, int value){
+    if(g->cells==NULL || cell<0 || cell>=g->width*g->height) return 0;
+    if(value<0) value=0;
+    g->cells[cell].danger=value;
+    return 1;
+}
+
+void grid_clear_danger(Grid *g){
+    if(g->cells==NULL) return;
+    for(int i=0;i<g->width*g->height;i++) g->cells[i].danger=0;
 }
