@@ -19,7 +19,7 @@ static int build_tree(const uint32_t freq[256]){
     static Heap h;
     HeapItem a,b;
     heap_init(&h);
-    node_count=0;
+    node_count=0;   
     for(int s=0;s<256;s++){
         if(freq[s]==0) continue;
         nodes[node_count].freq=(int)freq[s];
