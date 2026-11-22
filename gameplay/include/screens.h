@@ -19,7 +19,16 @@ enum class ScreenAction {
     PickProfile,
     DeleteProfile,
     CreateProfile,
-    Back
+    Back,
+    PickMap,
+    SelectMap,
+    FocusMapSearch,
+    ContinueMap
+};
+
+struct MapHit {
+    ScreenAction action;
+    int index;
 };
 
 struct ProfileRow {
@@ -41,6 +50,29 @@ struct EndStats {
     int towersBuilt;
     int enemiesDefeated;
     int castleHealth;
+    std::string mapName;
+    int score;
+    int bestScore;
+    bool newBestScore;
+    int timeMs;
+    bool timeKnown;
+    int bestTimeMs;
+    bool newBestTime;
+};
+
+struct MapRow {
+    int level;
+    int bestScore;
+    int bestTimeMs;
+    int plays;
+    int wins;
+    int savedWave;
+};
+
+struct MapSelectView {
+    std::vector<MapRow> rows;
+    int selected;
+    std::string search;
 };
 
 class Screens {
@@ -52,6 +84,7 @@ public:
     ScreenAction endHit(float mx, float my) const;
     ScreenAction helpHit(float mx, float my) const;
     ProfileHit profilesHit(float mx, float my, int rowCount) const;
+    MapHit mapSelectHit(float mx, float my, const MapSelectView& view) const;
 
     void drawMenu(Gfx& g, const MouseState& mouse, bool hasSave, const std::string& profileName) const;
     void drawPause(Gfx& g, const MouseState& mouse) const;
@@ -59,6 +92,8 @@ public:
     void drawHelp(Gfx& g, const MouseState& mouse) const;
     void drawProfiles(Gfx& g, const MouseState& mouse, const std::vector<ProfileRow>& rows, const std::string& input,
                       int pendingDeleteId, bool canGoBack) const;
+    void drawMapSelect(Gfx& g, const MouseState& mouse, const MapSelectView& view) const;
+    static void drawMapPreview(Gfx& g, int level, float px, float py, float cell);
 
 private:
     Button newGame;
@@ -68,6 +103,10 @@ private:
     Button quit;
     Button createProfile;
     Button backProfiles;
+    Button backMaps;
+    Button playMap;
+    Button continueMap;
+    TextBox mapSearchBox;
     TextBox nameBox;
     Button resume;
     Button restartPause;
