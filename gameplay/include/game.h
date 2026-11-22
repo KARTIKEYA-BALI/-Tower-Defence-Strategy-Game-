@@ -12,6 +12,7 @@
 #include "shop_manager.h"
 #include "side_panel.h"
 #include "tower.h"
+#include "troop.h"
 #include "wave_manager.h"
 #include <memory>
 #include <string>
@@ -38,12 +39,18 @@ public:
 
     void addEntity(std::unique_ptr<Entity> e);
     const std::vector<Enemy*>& enemyList() const { return enemies; }
+    const std::vector<Tower*>& towerList() const { return towers; }
+    const std::vector<Drone*>& droneList() const { return drones; }
+    const std::vector<Troop*>& troopList() const { return troops; }
+    void damageTroop(Troop& troop, int amount);
     Enemy* findEnemy(int id) const;
     Tower* findTower(int id) const;
     void damageEnemy(Enemy& enemy, int amount);
     void splashDamage(float x, float y, float radius, int damage);
     void damageCastle(int amount, float x, float y);
     void deliverDrone(Drone& drone, Tower& tower);
+    void damageTower(Tower& tower, int amount);
+    void damageDrone(Drone& drone, int amount);
     Effects& fx() { return effects; }
 
     void spawnEnemy(EnemyKind kind, float healthScale);
@@ -64,6 +71,8 @@ private:
     std::vector<std::unique_ptr<Entity>> pending;
     std::vector<Enemy*> enemies;
     std::vector<Tower*> towers;
+    std::vector<Drone*> drones;
+    std::vector<Troop*> troops;
 
     GameState state;
     bool running;

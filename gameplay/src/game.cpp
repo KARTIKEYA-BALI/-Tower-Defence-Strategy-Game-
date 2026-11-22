@@ -284,6 +284,34 @@ void Game::damageCastle(int amount, float x, float y) {
     effects.floatText(x, y - 40.0f, "-" + std::to_string(amount), pal::danger);
 }
 
+void Game::damageTower(Tower& t, int amount) {
+    if (!t.isAlive()) return;
+    effects.sparks(t.getX(), t.getY(), rgba(255, 170, 80));
+    if (!t.takeDamage(amount)) return;
+    engine_remove_tower(t.getCellX(), t.getCellY());
+    mapVersion++;
+    effects.explosion(t.getX(), t.getY(), 40.0f, rgba(255, 140, 60));
+    effects.rubble(t.getX(), t.getY());
+    if (selectedTowerId == t.getId()) selectedTowerId = -1;
+    showMessage("Raiders destroyed your " + t.getType().title + "!", pal::danger);
+}
+
+void Game::damageDrone(Drone& d, int amount) {
+    if (!d.isAlive()) return;
+    if (!d.takeDamage(amount)) return;
+    effects.explosion(d.getX(), d.getY() - Drone::ALTITUDE, 22.0f, rgba(120, 200, 255));
+    showMessage(d.isOutbound() ? "A drone was shot down with its cargo" : "A drone was shot down", pal::danger);
+}
+
+void Game::damageTroop(Troop& t, int amount) {
+    if (!t.isAlive()) return;
+    effects.sparks(t.getX(), t.getY(), rgba(255, 170, 80));
+    if (!t.takeDamage(amount)) return;
+    effects.explosion(t.getX(), t.getY(), 36.0f, rgba(255, 140, 60));
+    effects.rubble(t.getX(), t.getY());
+    showMessage("Raiders destroyed a Cannon Cart!", pal::danger);
+}
+
 void Game::deliverDrone(Drone& d, Tower& t) {
     if (d.getKind() == DroneKind::Ammo) {
         int added = t.resupply(t.ammoCrate());
